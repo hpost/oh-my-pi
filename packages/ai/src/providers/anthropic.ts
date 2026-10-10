@@ -4041,6 +4041,9 @@ function applyPromptCaching(params: MessageCreateParamsStreaming, cacheControl?:
 			candidateIndices.push(decimationIndices[i]);
 		}
 	}
+	if (decimationIndices.length === 0 && userIndices.length > 0 && !candidateIndices.includes(userIndices[0])) {
+		candidateIndices.push(userIndices[0]);
+	}
 	if (stableMessageEnd < messageEnd && stableMessageEnd >= 0 && !candidateIndices.includes(stableMessageEnd)) {
 		candidateIndices.push(stableMessageEnd);
 	}

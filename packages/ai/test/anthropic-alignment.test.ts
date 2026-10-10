@@ -382,13 +382,16 @@ describe("Anthropic request fingerprint alignment", () => {
 
 		expect(payload.system?.filter(block => block.cache_control != null)).toHaveLength(1);
 		const messages = payload.messages ?? [];
-		expect(messages[0]?.content).toBe("Use the tool");
-		const assistantContent = messages.at(-2)?.content;
-		expect(Array.isArray(assistantContent) ? assistantContent.at(-1)?.type : undefined).toBe("tool_use");
-		expect(Array.isArray(assistantContent) ? assistantContent.at(-1)?.cache_control : undefined).toEqual({
-			type: "ephemeral",
-			ttl: "1h",
-		});
+		expect(messages[0]?.content).toEqual([
+			{
+				type: "text",
+				text: "Use the tool",
+				cache_control: {
+					type: "ephemeral",
+					ttl: "1h",
+				},
+			},
+		]);
 		const lastContent = messages.at(-1)?.content;
 		expect(Array.isArray(lastContent) ? lastContent.at(-1)?.type : undefined).toBe("tool_result");
 		expect(Array.isArray(lastContent) ? lastContent.at(-1)?.cache_control : undefined).toEqual({

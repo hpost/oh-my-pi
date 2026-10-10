@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed intermediate Anthropic prompt-cache invalidation during multi-turn tool loops by anchoring the initial conversational user turn when decimation checkpoints have not yet been reached.
+
 ## [18.8.7] - 2026-10-09
 
 ### Added

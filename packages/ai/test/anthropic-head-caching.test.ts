@@ -687,9 +687,9 @@ describe("anthropic head caching (general API-key path)", () => {
 			.map((block, index) => ("cache_control" in block && block.cache_control != null ? index : -1))
 			.filter(index => index >= 0);
 		expect(cachedSystem).toEqual([system.length - 1]);
-		// The move keeps the head at tool + system, so both rolling message
-		// breakpoints survive.
-		expect(findCachedMessageIndices(body)).toEqual([1, 2]);
+		// The move keeps the head at tool + system, preserving the initial user
+		// turn anchor and the trailing turn breakpoint.
+		expect(findCachedMessageIndices(body)).toEqual([0, 2]);
 	});
 
 	it("falls back to tail anchoring when every system block is volatile", async () => {
@@ -703,5 +703,49 @@ describe("anthropic head caching (general API-key path)", () => {
 			.map((block, index) => ("cache_control" in block && block.cache_control != null ? index : -1))
 			.filter(index => index >= 0);
 		expect(cachedSystem).toContain(systemAfter.length - 1);
+	});
+
+	it("anchors the initial conversational user turn across intermediate tool turns", async () => {
+		const messages: Message[] = [
+			{ role: "user", content: "initial prompt", timestamp: 1 },
+			{
+				role: "assistant",
+				content: [{ type: "toolCall", id: "call-1", name: "test_tool", arguments: {} }],
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+				stopReason: "toolUse",
+				timestamp: 2,
+			},
+			{
+				role: "toolResult",
+				toolCallId: "call-1",
+				toolName: "test_tool",
+				content: [{ type: "text", text: "tool result 1" }],
+				details: {},
+				isError: false,
+				timestamp: 3,
+			},
+			{
+				role: "assistant",
+				content: [{ type: "toolCall", id: "call-2", name: "test_tool", arguments: {} }],
+				usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+				stopReason: "toolUse",
+				timestamp: 4,
+			},
+			{
+				role: "toolResult",
+				toolCallId: "call-2",
+				toolName: "test_tool",
+				content: [{ type: "text", text: "tool result 2" }],
+				details: {},
+				isError: false,
+				timestamp: 5,
+			},
+		];
+
+		const body = await captureWireBody(undefined, { ...CONTEXT, messages });
+		expect(countCacheBreakpoints(body)).toBeLessThanOrEqual(4);
+		const cached = findCachedMessageIndices(body);
+		expect(cached).toContain(0);
+		expect(cached).toContain(4);
 	});
 });
